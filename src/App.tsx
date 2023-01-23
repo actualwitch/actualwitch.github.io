@@ -1,8 +1,11 @@
 import styled from "@emotion/styled";
 import { useLiveQuery } from "dexie-react-hooks";
-import React, { FC } from "react";
-import { DateTime, Duration, DurationLikeObject } from "luxon";
+import { DateTime } from "luxon";
+import { FC, useMemo, useState } from "react";
+import { toDateTimeLocal } from "./adapters";
+import { useNow } from "./hooks";
 import { Cycle, store } from "./store";
+import { getDurationFromHuman, toHuman } from "./utils";
 
 const Page = styled.div`
   font-family: Helvetica Neue, Arial, sans-serif;
@@ -25,74 +28,25 @@ const ItemContainer = styled.section`
 
 const Wrap = styled.div``;
 
-const getDurationFromHuman = (human: string) => {
-  let mode: null | "every" = null;
-  const duration: DurationLikeObject = {};
-  let amount: null | number = null;
-  const words = human.split(" ");
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i];
-    if (i === 0) {
-      if (word === "every") mode = "every";
-    } else {
-      if (mode === "every") {
-        const value = Number(word);
-        if (!Number.isNaN(value)) {
-          amount = value;
-          continue;
-        }
-        if (amount) {
-          const unit = word;
-          switch (unit) {
-            case "second":
-            case "seconds":
-              duration.seconds = amount;
-              break;
-            case "minute":
-            case "minutes":
-              duration.minutes = amount;
-              break;
-            case "hour":
-            case "hours":
-              duration.hours = amount;
-              break;
-            case "day":
-            case "days":
-              duration.days = amount;
-              break;
-            case "week":
-            case "weeks":
-              duration.weeks = amount;
-              break;
-            case "month":
-            case "months":
-              duration.months = amount;
-              break;
-            case "year":
-            case "years":
-              duration.years = amount;
-              break;
-            default:
-              amount = null;
-          }
-        }
-      }
-    }
-  }
-  const value = Duration.fromObject(duration);
-  if (value.isValid) return value;
-  throw new Error("Invalid duration");
-};
-
 const Item: FC<{
   cycle?: Cycle;
   onSave: (cycle: Cycle) => void;
   now: DateTime;
 }> = ({ cycle, onSave, now }) => {
-  const [isEditing, setIsEditing] = React.useState(false);
-  const [start, setStart] = React.useState("");
-  const [title, setTitle] = React.useState("");
-  const [duration, setDuration] = React.useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [start, setStart] = useState("");
+  const [title, setTitle] = useState("");
+  const [duration, setDuration] = useState("");
+
+  const status = useMemo(() => {
+    if (!cycle?.start || !cycle?.duration) return undefined;
+    const difference = now.diff(
+      DateTime.fromISO(cycle.start).plus(getDurationFromHuman(cycle.duration))
+    );
+    if (difference.milliseconds < 0)
+      return `next in ${toHuman(difference.negate())}`;
+    return `overdue by ${toHuman(difference)}`;
+  }, [cycle?.duration, cycle?.start, now]);
   if (!isEditing && !cycle)
     return (
       <ItemContainer
@@ -100,7 +54,7 @@ const Item: FC<{
           const date = now.toUTC();
           setIsEditing(true);
           setTitle("");
-          setStart(`${date.toSQLDate()}T${date.toFormat("HH:mm")}`);
+          setStart(toDateTimeLocal(date));
           setDuration("every 1 day");
         }}
       >
@@ -164,25 +118,25 @@ const Item: FC<{
               onClick={() => {
                 if (!cycle?.id) return;
                 store.cycles.update(cycle.id, {
-                  start: `${now.toSQLDate()}T${now.toFormat("HH:mm")}`,
+                  start: toDateTimeLocal(now),
                 });
               }}
             >
               Track
             </button>
-            <button onClick={() => {
-              if (!cycle?.id) return;
-              store.cycles.delete(cycle.id);
-            }}>remove</button>
+            <button
+              onClick={() => {
+                if (!cycle?.id) return;
+                store.cycles.delete(cycle.id);
+              }}
+            >
+              Remove
+            </button>
           </div>
           <h3>{cycle?.title}</h3>
           <p>
-            {cycle?.duration && getDurationFromHuman(cycle.duration).toHuman()}{" "}
-            -{" "}
-            {now
-              .diff(DateTime.fromISO(cycle?.start || ""))
-              .shiftTo("days", "hours", "minutes")
-              .toHuman()} until next
+            {cycle?.duration}
+            {status && ` ● ${status}`}
           </p>
           <p>
             {cycle?.start &&
@@ -192,17 +146,6 @@ const Item: FC<{
       )}
     </ItemContainer>
   );
-};
-
-const useNow = () => {
-  const [now, setNow] = React.useState(DateTime.local());
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(DateTime.local());
-    }, 1_000_000);
-    return () => clearInterval(interval);
-  }, []);
-  return now;
 };
 
 function App() {
