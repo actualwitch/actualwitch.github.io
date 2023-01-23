@@ -21,7 +21,19 @@
     "react-dom": "latest",
     "react-scripts": "latest",
     "typescript": "latest",
-    "web-vitals": "latest"
+    "web-vitals": "latest",
+    "workbox-background-sync": "latest",
+    "workbox-broadcast-update": "latest",
+    "workbox-cacheable-response": "latest",
+    "workbox-core": "latest",
+    "workbox-expiration": "latest",
+    "workbox-google-analytics": "latest",
+    "workbox-navigation-preload": "latest",
+    "workbox-precaching": "latest",
+    "workbox-range-requests": "latest",
+    "workbox-routing": "latest",
+    "workbox-strategies": "latest",
+    "workbox-streams": "latest"
   },
   "scripts": {
     "start": "react-scripts start",
