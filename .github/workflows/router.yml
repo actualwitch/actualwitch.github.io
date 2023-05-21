@@ -1,0 +1,24 @@
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Prepare
+        run: |
+          sudo apt-get update
+          DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get install -y build-essential libncurses-dev libncursesw5-dev zlib1g-dev gawk git gettext libssl-dev xsltproc rsync wget unzip python3 python3-distutils file
+      - name: Prepare Image Builder
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://downloads.cdn.openwrt.org/snapshots/targets/mediatek/mt7622/openwrt-imagebuilder-mediatek-mt7622.Linux-x86_64.tar.xz | tar -xJf -
+          mv openwrt-imagebuilder-mediatek-mt7622.Linux-x86_64 openwrt-imagebuilder
+      - name: Build
+        run: |
+          cd openwrt-imagebuilder
+          make image PROFILE="netgear_wax206" PACKAGES="luci luci-ssl luci-app-sqm wireguard-tools"
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: wax206
+          path: openwrt-imagebuilder/bin/targets/mediatek/mt7622/openwrt-mediatek-mt7622-netgear_wax206-squashfs-sysupgrade.bin
