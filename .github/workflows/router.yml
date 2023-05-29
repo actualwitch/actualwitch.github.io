@@ -1,5 +1,5 @@
+name: Build OpenWRT
 on: workflow_dispatch
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,4 +21,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: wax206
-          path: openwrt-imagebuilder/bin/targets/mediatek/mt7622/openwrt-mediatek-mt7622-netgear_wax206-squashfs-sysupgrade.bin
+          path: openwrt-imagebuilder/bin/targets/mediatek/mt7622/
